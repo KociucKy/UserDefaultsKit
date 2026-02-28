@@ -15,10 +15,18 @@ let package = Package(
             name: "UserDefaultsKit",
             targets: ["UserDefaultsKit"]
         ),
+        .library(
+            name: "UserDefaultsKitUI",
+            targets: ["UserDefaultsKitUI"]
+        ),
     ],
     targets: [
         .target(
             name: "UserDefaultsKit"
+        ),
+        .target(
+            name: "UserDefaultsKitUI",
+            dependencies: ["UserDefaultsKit"]
         ),
         .testTarget(
             name: "UserDefaultsKitTests",
