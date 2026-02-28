@@ -40,13 +40,13 @@ public final class UserDefaultsStore: UserDefaultsStorable, @unchecked Sendable 
 
     // MARK: Storage
 
-    private let defaults: UserDefaults
+    let _defaults: UserDefaults
 
     // MARK: Init
 
     /// Creates a store backed by the given `UserDefaults` instance.
     public init(_ defaults: UserDefaults) {
-        self.defaults = defaults
+        self._defaults = defaults
     }
 
     // MARK: UserDefaultsStorable
@@ -55,7 +55,7 @@ public final class UserDefaultsStore: UserDefaultsStorable, @unchecked Sendable 
         if let codableType = Value.self as? any Codable.Type {
             // Route Codable types through JSON decoding.
             guard
-                let data = defaults.data(forKey: key.key),
+                let data = _defaults.data(forKey: key.key),
                 let decoded = try? JSONDecoder().decode(codableType, from: data)
             else {
                 return key.defaultValue
@@ -65,23 +65,23 @@ public final class UserDefaultsStore: UserDefaultsStorable, @unchecked Sendable 
         }
 
         // Primitive types stored natively by UserDefaults.
-        return (defaults.object(forKey: key.key) as? Value) ?? key.defaultValue
+        return (_defaults.object(forKey: key.key) as? Value) ?? key.defaultValue
     }
 
     public func set<Value>(_ value: Value?, for key: UserDefaultsKey<Value>) {
         guard let value else {
-            defaults.removeObject(forKey: key.key)
+            _defaults.removeObject(forKey: key.key)
             return
         }
 
         if let codable = value as? any Encodable {
             if let data = try? JSONEncoder().encode(codable) {
-                defaults.set(data, forKey: key.key)
+                _defaults.set(data, forKey: key.key)
             }
             return
         }
 
         // Primitive types stored natively.
-        defaults.set(value, forKey: key.key)
+        _defaults.set(value, forKey: key.key)
     }
 }
