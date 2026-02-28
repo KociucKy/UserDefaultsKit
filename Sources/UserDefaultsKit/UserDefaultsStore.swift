@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 // MARK: - Protocol
@@ -16,6 +17,13 @@ public protocol UserDefaultsStorable: Sendable {
     /// Pass `nil` to remove the value, causing subsequent reads to return
     /// the key's `defaultValue`.
     func set<Value>(_ value: Value?, for key: UserDefaultsKey<Value>)
+
+    /// Returns a publisher that emits the current value immediately, then emits
+    /// again whenever the value for `key` changes.
+    ///
+    /// The publisher never fails. Removing a value from the store causes it to
+    /// emit the key's `defaultValue`.
+    func publisher<Value>(for key: UserDefaultsKey<Value>) -> AnyPublisher<Value, Never>
 }
 
 // MARK: - Live implementation

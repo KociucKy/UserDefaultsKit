@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 @testable import UserDefaultsKit
 
@@ -15,6 +16,9 @@ public final class MockUserDefaultsStore: UserDefaultsStorable, @unchecked Senda
 
     private let lock = NSLock()
     private var storage: [String: Any] = [:]
+
+    /// Fires with the raw string key whenever any value is written or removed.
+    private let changeSubject = PassthroughSubject<String, Never>()
 
     public init() {}
 
@@ -39,20 +43,35 @@ public final class MockUserDefaultsStore: UserDefaultsStorable, @unchecked Senda
 
     public func set<Value>(_ value: Value?, for key: UserDefaultsKey<Value>) {
         lock.lock()
-        defer { lock.unlock() }
 
         guard let value else {
             storage.removeValue(forKey: key.key)
+            lock.unlock()
+            changeSubject.send(key.key)
             return
         }
 
         if let codable = value as? any Encodable,
            let data = try? JSONEncoder().encode(codable) {
             storage[key.key] = data
+            lock.unlock()
+            changeSubject.send(key.key)
             return
         }
 
         storage[key.key] = value
+        lock.unlock()
+        changeSubject.send(key.key)
+    }
+
+    public func publisher<Value>(for key: UserDefaultsKey<Value>) -> AnyPublisher<Value, Never> {
+        let changePublisher = changeSubject
+            .filter { $0 == key.key }
+            .map { [self] _ in self.get(key) }
+
+        return Just(get(key))
+            .merge(with: changePublisher)
+            .eraseToAnyPublisher()
     }
 
     // MARK: Test helpers
@@ -60,7 +79,9 @@ public final class MockUserDefaultsStore: UserDefaultsStorable, @unchecked Senda
     /// Removes all stored values, returning the store to its initial empty state.
     public func reset() {
         lock.lock()
-        defer { lock.unlock() }
+        let keys = Array(storage.keys)
         storage.removeAll()
+        lock.unlock()
+        keys.forEach { changeSubject.send($0) }
     }
 }
